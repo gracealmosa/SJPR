@@ -37,6 +37,8 @@ $member_info = $database->display('member_info');
 $event_record = $database->display('event');
 $admin = $database->display_admin('personal_accounts','personal_info');
 */
+$baptism = $database->display('baptismal');
+$personal_info = $database->display('personal_info');
 $priest_info = $database->display('priest_info');
 HTML::head();
 $current_tab = "dashboard";
@@ -53,7 +55,7 @@ if($current_tab == "accountsetting")
 }else if($current_tab == "priestdetail"){
   priestDetail($priest_info);
 }else if($current_tab == "memberdetail"){
-  memberDetail($member_info);
+  personalInfoDetail($personal_info);
 }else if($current_tab == "dashboard"){
   //dashboard($otalbaptismal,$totalconfirmation,totaldefuncturiom: $totaldefuncturiom,$totalmarriage,$event_record);
 }else if($current_tab == "specialmass"){
@@ -66,8 +68,8 @@ if($current_tab == "accountsetting")
   confessionSched($confess_sched,$priest_info);
 }else if($current_tab == "massched"){
   massSched($mass_sched,$priest_info);
-}else if($current_tab == "baptismal"){
-  baptismal($baptismal,$member_info,$priest_info);
+}else if($current_tab == "baptism"){
+  baptismDetail($baptism);
 }else if($current_tab == "confirmation"){
   confirmation($confirmation,$member_info,$priest_info);
 }else if($current_tab == "defuncturiom"){
@@ -107,7 +109,7 @@ if (!isset($_POST['add_priest'])) {
   unset($_SESSION['priest_added']);
 }
 
-if (ISSET($_POST['add_member']) && !isset($_SESSION['member_added'])){
+if (ISSET($_POST['add_person']) && !isset($_SESSION['added_person'])){
   $columns = array(
       "first_name",
       "middle_name",
@@ -141,14 +143,14 @@ if (ISSET($_POST['add_member']) && !isset($_SESSION['member_added'])){
       $_POST['mothers_middle_name']);
 
   $database->Create($columns,$values,"personal_info");
-  $_SESSION['member_added'] = true;
+  $_SESSION['added_person'] = true;
   echo'<script language="javascript">alert("A new member is Added!");</script>';
   header("Location: " . $_SERVER['REQUEST_URI']);
   exit;
 }
 
-if (!isset($_POST['add_member'])) {
-  unset($_SESSION['member_added']);
+if (!isset($_POST['add_person'])) {
+  unset($_SESSION['added_person']);
 }
 
 if (ISSET($_POST['add_specialmass'])){
@@ -402,13 +404,13 @@ if(isset($_POST['delete_priest'])){
   $priests = $_POST['priest_info_id'];
   $database->deleteRecord('priest_info',$priests,'priest_info_id');
 }
-if(isset($_POST['deletemember'])){
-  $members = $_POST['member_id'];
-  $database->deleteRecord('member_info',$members,'member_id');
+if(isset($_POST['delete_person'])){
+  $personal = $_POST['personal_info_id'];
+  $database->deleteRecord('personal_info',$personal,'personal_info_id');
 }
-if(isset($_POST['deletebaptismal'])){
-  $baptize = $_POST['baptismal_id'];
-  $database->deleteRecord('baptismal',$baptize,'baptismal_id');
+if(isset($_POST['delete_baptism'])){
+  $baptize = $_POST['baptism_id'];
+  $database->deleteRecord('baptism',$baptize,'baptism_id');
 }
 if(isset($_POST['deleteconfirmation'])){
   $confirmed = $_POST['confirmation_id'];
@@ -472,32 +474,118 @@ if (isset($_POST['update_priest'])) {
 }
 
 
-if (isset($_POST['update_member'])) {
+if (isset($_POST['update_person'])) {
   // Check if all required fields are set in $_POST
-  if (isset($_POST['member_id'], $_POST['firstname'], $_POST['middlename'], $_POST['lastname'], $_POST['birthdate'], $_POST['p_address'], $_POST['contact_no'], $_POST['age'], $_POST['stats'])) {
-    $member_id = $_POST['member_id'];
-    $firstname = $_POST['firstname'];
-    $middlename = $_POST['middlename'];
-    $lastname = $_POST['lastname'];
-    $birthdate = $_POST['birthdate'];
-    $address = $_POST['p_address'];
-    $contact_no = $_POST['contact_no'];
-    $age = $_POST['age'];
-    $stats = $_POST['stats'];
+  if (isset(
+      $_POST['personal_info_id'],
+      $_POST['first_name'],
+      $_POST['middle_name'],
+      $_POST['last_name'],
+      $_POST['suffix'],
+      $_POST['gender'],
+      $_POST['birth_date'],
+      $_POST['address'],
+      $_POST['status'],
+      $_POST['fathers_first_name'],
+      $_POST['fathers_middle_name'],
+      $_POST['fathers_last_name'],
+      $_POST['mothers_first_name'],
+      $_POST['mothers_middle_name'],
+      $_POST['mothers_last_name']
+  )) {
+      // Assign values to variables
+      $personal_info_id = $_POST['personal_info_id'];
+      $first_name = $_POST['first_name'];
+      $middle_name = $_POST['middle_name'];
+      $last_name = $_POST['last_name'];
+      $suffix = $_POST['suffix'];
+      $gender = $_POST['gender'];
+      $birth_date = $_POST['birth_date'];
+      $address = $_POST['address'];
+      $status = $_POST['status'];
+      $fathers_first_name = $_POST['fathers_first_name'];
+      $fathers_middle_name = $_POST['fathers_middle_name'];
+      $fathers_last_name = $_POST['fathers_last_name'];
+      $mothers_first_name = $_POST['mothers_first_name'];
+      $mothers_middle_name = $_POST['mothers_middle_name'];
+      $mothers_last_name = $_POST['mothers_last_name'];
 
-     $result = $database->updateMembers($member_id, $firstname, $middlename, $lastname, $birthdate, $p_address, $contact_no, $age, $stats);
+      // Call the update method on the database
+      $result = $database->updatePersonalInfo(
+          $personal_info_id,
+          $first_name,
+          $middle_name,
+          $last_name,
+          $suffix,
+          $gender,
+          $birth_date,
+          $address,
+          $status,
+          $fathers_first_name,
+          $fathers_middle_name,
+          $fathers_last_name,
+          $mothers_first_name,
+          $mothers_middle_name,
+          $mothers_last_name
+      );
+
+      // Check the result of the update operation
       if ($result === true) {
           // Record updated successfully
-          // Redirect or show a success message
+          echo "Record updated successfully.";
+          // You can redirect to a different page or refresh the current page
+          header("Location: success_page.php"); // Adjust the URL as needed
+          exit();
       } else {
           // Handle error
-          echo $result;
+          echo "Error: " . htmlspecialchars($result);
       }
-  }  
-  else {
+  } else {
       echo "Error: One or more required fields are not provided.";
   }
 }
+
+if (isset($_POST['update_person'])) {
+  // Check if all required fields are set in $_POST
+  if (isset(
+      $_POST['baptism_id'],
+      $_POST['personal_info_id'],
+      $_POST['files_id'],
+      $_POST['priest_id'],
+      $_POST['date_of_baptism']
+  )) {
+      // Assign values to variables
+      $baptism_id = $_POST['baptism_id'];
+      $personal_info_id = $_POST['personal_info_id'];
+      $files_id = $_POST['files_id'];
+      $priest_id = $_POST['priest_id'];
+      $date_of_baptism = $_POST['date_of_baptism'];
+
+      // Call the update method on the database
+      $result = $database->updateBaptismalInfo(
+          $baptism_id,
+          $personal_info_id,
+          $files_id,
+          $priest_id,
+          $date_of_baptism
+      );
+
+      // Check the result of the update operation
+      if ($result === true) {
+          // Record updated successfully
+          echo "Record updated successfully.";
+          // You can redirect to a different page or refresh the current page
+          header("Location: success_page.php"); // Adjust the URL as needed
+          exit();
+      } else {
+          // Handle error
+          echo "Error: " . htmlspecialchars($result);
+      }
+  } else {
+      echo "Error: One or more required fields are not provided.";
+  }
+}
+
 
 ?>
 

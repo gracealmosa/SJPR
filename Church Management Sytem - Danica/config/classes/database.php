@@ -70,18 +70,42 @@ public function db_connect($dsn, $db_user, $db_pw) {
         return $stmt->fetchAll(PDO::FETCH_OBJ);
     }
 
-    public function display_baptismal($tablename){
-        $stmt = $this->pdo->prepare("SELECT baptismal.*, priest_detail.firstname AS priest_firstname, priest_detail.lastname AS priest_lastname, 
-                                     member_info.firstname AS member_firstname, member_info.lastname AS member_lastname
-                                     FROM baptismal 
-                                     INNER JOIN priest_detail ON baptismal.priest_id = priest_detail.priest_id
-                                     INNER JOIN member_info ON baptismal.member_id = member_info.member_id");
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_OBJ);
+    public function displayBaptismal($tablename) {
+        try {
+            // Prepare SQL query to select baptism details along with related priest and member information
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    baptism.baptism_id, 
+                    baptism.personal_info_id, 
+                    baptism.files_id, 
+                    baptism.priest_id, 
+                    baptism.date_of_baptism, 
+                    priest_detail.firstname AS priest_firstname, 
+                    priest_detail.lastname AS priest_lastname, 
+                    member_info.firstname AS member_firstname, 
+                    member_info.lastname AS member_lastname
+                FROM 
+                    {$tablename} AS baptism
+                JOIN 
+                    priest_detail ON baptism.priest_id = priest_detail.priest_id
+                JOIN 
+                    member_info ON baptism.personal_info_id = member_info.personal_info_id
+            ");
+            
+            // Execute the query
+            $stmt->execute();
+            
+            // Fetch all results as objects
+            return $stmt->fetchAll(PDO::FETCH_OBJ);
+        } catch (PDOException $e) {
+            // Handle exceptions (optional: log the error)
+            return "Error fetching baptism records: " . $e->getMessage();
+        }
     }
+    
 
-    public function count_baptismal_records(){
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) AS total FROM baptismal");
+    public function count_baptism_records(){
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) AS total FROM baptism");
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['total'];
@@ -183,33 +207,108 @@ public function db_connect($dsn, $db_user, $db_pw) {
     }
     
 
-    public function updateMembers($member_id,$firstname, $middlename, $lastname, $birthdate, $p_address, $contact_no, $age, $stats) {
+    public function updatePersonalInfo(
+        $personal_info_id,
+        $first_name,
+        $middle_name,
+        $last_name,
+        $suffix,
+        $gender,
+        $birth_date,
+        $address,
+        $status,
+        $fathers_first_name,
+        $fathers_middle_name,
+        $fathers_last_name,
+        $mothers_first_name,
+        $mothers_middle_name,
+        $mothers_last_name
+    ) {
         try {
-            $stmt = $this->pdo->prepare("UPDATE member_info SET firstname = :firstname,middlename = :middlename, lastname = :lastname,birthdate = :birthdate,p_address = :p_address,contact_no = :contact_no,age = :age, stats = :stats WHERE member_id = :member_id");
+            // Prepare the SQL statement for updating the personal_info table
+            $stmt = $this->pdo->prepare("
+                UPDATE personal_info 
+                SET 
+                    first_name = :first_name,
+                    middle_name = :middle_name,
+                    last_name = :last_name,
+                    suffix = :suffix,
+                    gender = :gender,
+                    birth_date = :birth_date,
+                    address = :address,
+                    status = :status,
+                    fathers_first_name = :fathers_first_name,
+                    fathers_middle_name = :fathers_middle_name,
+                    fathers_last_name = :fathers_last_name,
+                    mothers_first_name = :mothers_first_name,
+                    mothers_middle_name = :mothers_middle_name,
+                    mothers_last_name = :mothers_last_name
+                WHERE 
+                    personal_info_id = :personal_info_id
+            ");
     
-            $stmt->bindParam(':member_id', $member_id);
-            $stmt->bindParam(':firstname', $firstname);
-            $stmt->bindParam(':middlename', $middlename);
-            $stmt->bindParam(':lastname', $lastname);
-            $stmt->bindParam(':birthdate', $birthdate);
-            $stmt->bindParam(':p_address', $p_address);
-            $stmt->bindParam(':contact_no', $contact_no);
-            $stmt->bindParam(':age', $age);
-            $stmt->bindParam(':stats', $stats);
-            
-            
+            // Bind parameters to the statement
+            $stmt->bindParam(':personal_info_id', $personal_info_id);
+            $stmt->bindParam(':first_name', $first_name);
+            $stmt->bindParam(':middle_name', $middle_name);
+            $stmt->bindParam(':last_name', $last_name);
+            $stmt->bindParam(':suffix', $suffix);
+            $stmt->bindParam(':gender', $gender);
+            $stmt->bindParam(':birth_date', $birth_date);
+            $stmt->bindParam(':address', $address);
+            $stmt->bindParam(':status', $status);
+            $stmt->bindParam(':fathers_first_name', $fathers_first_name);
+            $stmt->bindParam(':fathers_middle_name', $fathers_middle_name);
+            $stmt->bindParam(':fathers_last_name', $fathers_last_name);
+            $stmt->bindParam(':mothers_first_name', $mothers_first_name);
+            $stmt->bindParam(':mothers_middle_name', $mothers_middle_name);
+            $stmt->bindParam(':mothers_last_name', $mothers_last_name);
+    
+            // Execute the statement
             if ($stmt->execute()) {
-                $stmt = null;
-                $this->pdo = null;
+                return true; // Record updated successfully
+            } else {
+                return "Update Failed"; // Update failed for an unknown reason
+            }
+        } catch (PDOException $e) {
+            return "Query Failed: " . $e->getMessage(); // Return the error message
+        } finally {
+            // Clean up statement and connection
+            $stmt = null; // Release statement
+            $this->pdo = null; // Release database connection
+        }
+    }
+
+    public function updateBaptismalInfo($baptism_id, $personal_info_id, $files_id, $priest_id, $date_of_baptism) {
+        try {
+            $stmt = $this->pdo->prepare("
+                UPDATE baptism 
+                SET 
+                    personal_info_id = :personal_info_id, 
+                    files_id = :files_id, 
+                    priest_id = :priest_id, 
+                    date_of_baptism = :date_of_baptism 
+                WHERE 
+                    baptism_id = :baptism_id
+            ");
+    
+            $stmt->bindParam(':baptism_id', $baptism_id);
+            $stmt->bindParam(':personal_info_id', $personal_info_id);
+            $stmt->bindParam(':files_id', $files_id);
+            $stmt->bindParam(':priest_id', $priest_id);
+            $stmt->bindParam(':date_of_baptism', $date_of_baptism);
+    
+            if ($stmt->execute()) {
                 return true;
-           
             } else {
                 return "Update Failed";
             }
-        } catch(PDOException $e) {
+        } catch (PDOException $e) {
             return "Query Failed: " . $e->getMessage();
         }
     }
+    
+    
 
     public function display_admin($tablename){
         $stmt = $this->pdo->prepare("SELECT user_account.*, personal_info.firstname, personal_info.lastname 
